@@ -5,13 +5,6 @@ on:
     - cron: '0 0 * * 1'
   workflow_dispatch:
 
-name: Build Custom V2ray Rules
-
-on:
-  schedule:
-    - cron: '0 0 * * 1'
-  workflow_dispatch:
-
 permissions:
   contents: write
 
@@ -19,10 +12,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
     steps:
       - name: Checkout root repo
         uses: actions/checkout@v4
@@ -30,21 +19,21 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
-          
+          go-version: "1.21"
+
       - name: Checkout v2fly/domain-list-community
         uses: actions/checkout@v4
         with:
           repository: v2fly/domain-list-community
           path: domain-list-community
-          
+
       - name: Build custom geosite.dat
         run: |
           cd domain-list-community
           mkdir -p custom-data
-          
+
           CATEGORIES="vk kinopoisk aviasales drweb wildberries rutube ozon wink 2gis kaspersky ok yandex okko avito mosmetro dzen mailru mailru-group category-travel-ru x5 category-gov-ru category-entertainment-ru category-retail-ru category-medicine-ru category-media-ru category-ecommerce-ru category-ru category-bank-ru apple apple-intelligence icloudprivaterelay"
-          
+
           copy_with_deps() {
             local file=$1
             if [ -f "data/$file" ] && [ ! -f "custom-data/$file" ]; then
@@ -54,30 +43,28 @@ jobs:
               done
             fi
           }
-          
+
           for cat in $CATEGORIES; do
             copy_with_deps "$cat"
           done
-          
+
           rm -rf data
           mv custom-data data
           go run main.go --outputdir=../ --datapath=data/
           cd ..
-          
+
           if [ -f dlc.dat ]; then mv dlc.dat geosite.dat; fi
-          
+
       - name: Build custom geoip.dat
         run: |
-          # Скачиваем официальный компилятор вместо сломанной утилиты v2dat
           git clone https://github.com/v2fly/geoip.git geoip-builder
           cd geoip-builder
-          
+
           mkdir -p custom-ips
           curl -sSL "https://raw.githubusercontent.com/v2fly/geoip/release/text/ru.txt" -o custom-ips/ru.txt
           curl -sSL "https://raw.githubusercontent.com/v2fly/geoip/release/text/private.txt" -o custom-ips/private.txt
           printf '17.0.0.0/8\n' > custom-ips/apple.txt
-          
-          # Генерируем конфигурацию для компилятора
+
           cat << 'EOF' > config.json
           {
             "input": [
@@ -90,18 +77,16 @@ jobs:
             ]
           }
           EOF
-          
-          # Собираем ваш собственный мини-файл geoip.dat
+
           go run . -c config.json
           cd ..
-          
-      - name: Publish to Github Releases
+
+      - name: Publish to GitHub Releases
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Минималистичные сборки V2ray DAT файлов (Geosite и GeoIP)." > release.txt
+          echo "Минималистичные сборки V2ray DAT файлов: RU, private и Apple." > release.txt
           gh release delete latest --cleanup-tag --yes || true
           gh release create latest geosite.dat geoip.dat \
             --notes-file release.txt \
             --title "Lightweight Custom Rules"
-
