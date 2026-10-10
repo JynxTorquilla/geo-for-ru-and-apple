@@ -5,6 +5,21 @@ on:
     - cron: '0 0 * * 1'
   workflow_dispatch:
 
+name: Build Custom V2ray Rules
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -82,8 +97,11 @@ jobs:
           
       - name: Publish to Github Releases
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "Минималистичные сборки V2ray DAT файлов (Geosite и GeoIP)." > release.txt
-          gh release delete latest --cleanup-tag -y || true
-          gh release create "latest" geosite.dat geoip.dat -F release.txt -t "Lightweight Custom Rules"
+          gh release delete latest --cleanup-tag --yes || true
+          gh release create latest geosite.dat geoip.dat \
+            --notes-file release.txt \
+            --title "Lightweight Custom Rules"
+
